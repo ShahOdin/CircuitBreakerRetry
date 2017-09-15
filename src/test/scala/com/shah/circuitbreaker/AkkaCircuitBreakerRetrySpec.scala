@@ -74,7 +74,7 @@ class AkkaCircuitBreakerRetrySpec extends TestKit(ActorSystem("AkkaCircuitBreake
     }
 
     "handle fast tasks immediately." in {
-      runAsync {
+      runWithCircuitBreakerRetry {
         Future{1}
       }.futureValue shouldBe 1
 
@@ -82,7 +82,7 @@ class AkkaCircuitBreakerRetrySpec extends TestKit(ActorSystem("AkkaCircuitBreake
     }
 
     "handle tolerable delays by retrying." in {
-      runAsync {
+      runWithCircuitBreakerRetry {
         delayFlag = !delayFlag
         potentiallyDelayedReturn(3)
       }.futureValue shouldBe 3
@@ -98,7 +98,7 @@ class AkkaCircuitBreakerRetrySpec extends TestKit(ActorSystem("AkkaCircuitBreake
       intolerableDuration should be >= delaySeq.last.toMillis
       intolerableDuration should be >= patienceConfig.interval.toMillis
 
-      runAsync {
+      runWithCircuitBreakerRetry {
         Future {
           Thread.sleep(intolerableDuration)
         }

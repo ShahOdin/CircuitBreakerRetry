@@ -42,7 +42,7 @@ trait CircuitBreakerRetry {
   /**
     * This is the function the client uses for attempting a future call. In case of failure, it retries a few times
     * and finally gives up and returns the failure*/
-  def runAsync[A](body: ⇒ Future[A]): Future[A] = {
+  def runWithCircuitBreakerRetry[A](body: ⇒ Future[A]): Future[A] = {
     retry(runWithCircuitBreaker(body), delaySeq)
   }
 
