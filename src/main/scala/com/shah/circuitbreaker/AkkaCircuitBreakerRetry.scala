@@ -36,7 +36,9 @@ trait AkkaCircuitBreakerRetryConfiguration{
   * [[AkkaCircuitBreakerRetry]] implements [[CircuitBreakerRetry]] by using Akka's circuit breaker internally.
   **/
 trait AkkaCircuitBreakerRetry extends CircuitBreakerRetry
-  with AkkaRetry with AkkaCircuitBreakerRetryConfiguration{
+  with AkkaRetry {
+
+  self: AkkaCircuitBreakerRetryConfiguration ⇒
 
   import akka.pattern.CircuitBreaker
 
