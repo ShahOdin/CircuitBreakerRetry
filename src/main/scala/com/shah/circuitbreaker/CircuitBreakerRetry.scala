@@ -9,18 +9,9 @@ import scala.concurrent.duration.FiniteDuration
 
 trait CircuitBreakerRetry {
 
+  self: Retry ⇒
+
   import scala.concurrent.Future
-
-  /**
-    * the implementations of this trait should run this callback
-    * before each retry attempt. can be used for logging retry attempts.
-    */
-  def onRetry(): Unit = ()
-
-  /**
-    * retries the future for as many times as we have delays configured.
-    */
-  private[circuitbreaker] def retry[T](body: => Future[T], delays: Seq[FiniteDuration]): Future[T]
 
   /**
     * The delay sequences attempted before finally giving up and returning failure.

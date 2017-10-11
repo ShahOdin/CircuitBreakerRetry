@@ -20,10 +20,10 @@ class AkkaCircuitBreakerRetrySpec extends TestKit(ActorSystem("AkkaCircuitBreake
   import scala.concurrent.Future
   import scala.concurrent.duration._
 
-  override val callTimeout: FiniteDuration = 2 seconds
+  override val callTimeout: FiniteDuration = 100 millis
 
-  override val resetTimeout: FiniteDuration = 3 seconds
-  override val maxResetTimeout: FiniteDuration = 8 seconds
+  override val resetTimeout: FiniteDuration = 200 millis
+  override val maxResetTimeout: FiniteDuration = 400 millis
 
   val exponentialBackoffFactor = 1.6
 
@@ -35,7 +35,7 @@ class AkkaCircuitBreakerRetrySpec extends TestKit(ActorSystem("AkkaCircuitBreake
     reAttemptCount = 0
   }
 
-  override def onRetry() = {
+  override def onRetry(): Unit = {
     reAttemptCount += 1
     println(s"retry attempted for ${reAttemptCount}th time.")
     super.onRetry()
@@ -56,14 +56,14 @@ class AkkaCircuitBreakerRetrySpec extends TestKit(ActorSystem("AkkaCircuitBreake
     }
   }
 
-  override def beforeEach = {
+  override def beforeEach: Unit = {
     resetAttemptCount()
     delayFlag = false
   }
 
   override implicit val patienceConfig: PatienceConfig = PatienceConfig(
     timeout = scaled(callTimeout),
-    interval = scaled(totalDelayTolerated + (delaySeq.length seconds) )
+    interval = scaled(totalDelayTolerated + (delaySeq.length seconds))
   )
 
   "A CircuitBreaker" must {
@@ -75,7 +75,9 @@ class AkkaCircuitBreakerRetrySpec extends TestKit(ActorSystem("AkkaCircuitBreake
 
     "handle fast tasks immediately." in {
       runWithCircuitBreakerRetry {
-        Future{1}
+        Future {
+          1
+        }
       }.futureValue shouldBe 1
 
       reAttemptCount shouldBe 0
@@ -93,7 +95,7 @@ class AkkaCircuitBreakerRetrySpec extends TestKit(ActorSystem("AkkaCircuitBreake
 
     "give up on intolerable delays after limited number of retry attempts." in {
 
-      val intolerableDuration: Long = 40000
+      val intolerableDuration: Long = 5000
 
       intolerableDuration should be >= delaySeq.last.toMillis
       intolerableDuration should be >= patienceConfig.interval.toMillis
