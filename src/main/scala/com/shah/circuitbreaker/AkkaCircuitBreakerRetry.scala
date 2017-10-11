@@ -41,7 +41,7 @@ trait AkkaCircuitBreakerRetry extends CircuitBreakerRetry
   import akka.pattern.CircuitBreaker
 
   private lazy val breaker = new CircuitBreaker(
-    scheduler,
+    scheduler = scheduler,
     maxFailures = maxFailures,
     callTimeout = callTimeout,
     resetTimeout = resetTimeout,
