@@ -1,6 +1,7 @@
 package com.shah.circuitbreaker
 
 import com.shah.Akka.AkkaDependency
+import com.shah.util.Retry
 import com.shah.util.SeriesGenerators._
 
 import scala.concurrent.Future
@@ -11,7 +12,7 @@ import scala.concurrent.duration.{Duration, FiniteDuration}
   **/
 trait AkkaCircuitBreakerRetry extends CircuitBreakerRetry {
 
-  self: AkkaCircuitBreakerRetryConfiguration with AkkaDependency ⇒
+  self: AkkaCircuitBreakerRetryConfiguration with AkkaDependency with Retry ⇒
 
   import akka.pattern.CircuitBreaker
 

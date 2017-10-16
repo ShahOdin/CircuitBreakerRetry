@@ -9,7 +9,9 @@ import scala.concurrent.duration.FiniteDuration
   * added support for limited retries before finally returning a failure.
   **/
 
-trait CircuitBreakerRetry extends Retry {
+trait CircuitBreakerRetry {
+
+  self: Retry ⇒
 
   import scala.concurrent.Future
 
