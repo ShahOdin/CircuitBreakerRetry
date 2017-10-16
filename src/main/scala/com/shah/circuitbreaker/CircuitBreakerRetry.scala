@@ -1,5 +1,7 @@
 package com.shah.circuitbreaker
 
+import com.shah.util.Retry
+
 import scala.concurrent.duration.FiniteDuration
 
 /**
@@ -7,9 +9,7 @@ import scala.concurrent.duration.FiniteDuration
   * added support for limited retries before finally returning a failure.
   **/
 
-trait CircuitBreakerRetry {
-
-  self: Retry ⇒
+trait CircuitBreakerRetry extends Retry {
 
   import scala.concurrent.Future
 

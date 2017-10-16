@@ -1,4 +1,4 @@
-package com.shah.circuitbreaker
+package com.shah.util
 
 import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration

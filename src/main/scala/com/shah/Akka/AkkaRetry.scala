@@ -1,17 +1,15 @@
-package com.shah.circuitbreaker
+package com.shah.Akka
+
+import com.shah.util.Retry
 
 import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
 
 trait AkkaRetry extends Retry{
 
+  self: AkkaDependency ⇒
+
   import akka.pattern.after
-
-  import akka.actor.Scheduler
-  implicit val scheduler: Scheduler
-
-  import scala.concurrent.ExecutionContext
-  implicit val ec: ExecutionContext
 
   /**
     * uses Akka's scheduler to retry task at specified intervals.

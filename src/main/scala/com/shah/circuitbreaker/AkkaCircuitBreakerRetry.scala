@@ -1,44 +1,17 @@
 package com.shah.circuitbreaker
 
-import scala.concurrent.Future
-import scala.concurrent.duration.Duration
-import scala.concurrent.duration.FiniteDuration
+import com.shah.Akka.AkkaDependency
 import com.shah.util.SeriesGenerators._
 
-trait AkkaCircuitBreakerRetryConfiguration{
-  /** Maximum number of failures before opening the circuit */
-  val maxFailures: Int
-
-  /**Duration of time after which to consider a call a failure*/
-  val callTimeout: FiniteDuration
-
-  /** Duration of time after which to attempt to close the circuit
-    * and also the smallest duration after which to attempt retries */
-  val resetTimeout: FiniteDuration
-
-  /**The circuitBreaker closing attempt timeOuts will grow with time and stay at a maximum value.
-    * For the retry functionality however, that is the maximum wait amount tolerated, after which
-    * the call fails.*/
-  val maxResetTimeout: FiniteDuration
-
-  /** The exponential factor by which the timeOut grows*/
-  val exponentialBackoffFactor: Double
-
-  import akka.actor.Scheduler
-  implicit val scheduler: Scheduler
-
-  import scala.concurrent.ExecutionContext
-  implicit val ec: ExecutionContext
-}
-
+import scala.concurrent.Future
+import scala.concurrent.duration.{Duration, FiniteDuration}
 
 /**
   * [[AkkaCircuitBreakerRetry]] implements [[CircuitBreakerRetry]] by using Akka's circuit breaker internally.
   **/
-trait AkkaCircuitBreakerRetry extends CircuitBreakerRetry
-  with AkkaRetry {
+trait AkkaCircuitBreakerRetry extends CircuitBreakerRetry {
 
-  self: AkkaCircuitBreakerRetryConfiguration ⇒
+  self: AkkaCircuitBreakerRetryConfiguration with AkkaDependency ⇒
 
   import akka.pattern.CircuitBreaker
 
@@ -49,7 +22,7 @@ trait AkkaCircuitBreakerRetry extends CircuitBreakerRetry
     resetTimeout = resetTimeout,
     maxResetTimeout = maxResetTimeout,
     exponentialBackoffFactor = exponentialBackoffFactor
-  )
+  )(ec)
 
   override lazy val delaySeq: Seq[FiniteDuration] = generateExponentialTimeIntervals(resetTimeout, maxResetTimeout, exponentialBackoffFactor)
 

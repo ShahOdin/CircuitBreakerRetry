@@ -2,32 +2,43 @@ package com.shah.circuitbreaker
 
 import akka.actor.ActorSystem
 import akka.testkit.TestKit
+import com.shah.Akka.AkkaDependency
 import org.scalatest.{BeforeAndAfterEach, Matchers, WordSpecLike}
 import org.scalatest.concurrent.ScalaFutures
 
+import scala.concurrent.{ExecutionContext, Future}
+
 class AkkaCircuitBreakerRetrySpec extends TestKit(ActorSystem("AkkaCircuitBreakerRetrySpec"))
-  with ScalaFutures with WordSpecLike with Matchers with BeforeAndAfterEach
-  with AkkaCircuitBreakerRetry with AkkaCircuitBreakerRetryConfiguration{
+  with ScalaFutures with WordSpecLike with Matchers with BeforeAndAfterEach {
 
-  import akka.actor.Scheduler
+  trait CircuitBreakerParameters extends AkkaDependency with AkkaCircuitBreakerRetryConfiguration {
+    import akka.actor.Scheduler
+    import scala.concurrent.ExecutionContext
 
-  import scala.concurrent.ExecutionContext
-  import scala.concurrent.duration.FiniteDuration
+    import scala.concurrent.duration.FiniteDuration
 
-  override val scheduler: Scheduler = system.scheduler
-  override val maxFailures: Int = 1
+    override val scheduler: Scheduler = system.scheduler
+    override implicit val ec: ExecutionContext = system.dispatcher
 
-  import scala.concurrent.Future
-  import scala.concurrent.duration._
+    override val maxFailures: Int = 1
 
-  override val callTimeout: FiniteDuration = 100.millis
+    import scala.concurrent.duration._
 
-  override val resetTimeout: FiniteDuration = 200.millis
-  override val maxResetTimeout: FiniteDuration = 400.millis
+    override val callTimeout: FiniteDuration = 100.millis
+    override val resetTimeout: FiniteDuration = 200.millis
+    override val maxResetTimeout: FiniteDuration = 400.millis
 
-  val exponentialBackoffFactor = 1.6
+    val exponentialBackoffFactor = 1.6
 
-  override implicit val ec: ExecutionContext = system.dispatcher
+  }
+
+  object CircuitBreaker extends AkkaCircuitBreakerRetryImplementation with CircuitBreakerParameters {
+    override def onRetry(): Unit = {
+      reAttemptCount += 1
+      println(s"retry attempted for ${reAttemptCount}th time.")
+      super.onRetry()
+    }
+  }
 
   var reAttemptCount: Int = 0
 
@@ -35,15 +46,11 @@ class AkkaCircuitBreakerRetrySpec extends TestKit(ActorSystem("AkkaCircuitBreake
     reAttemptCount = 0
   }
 
-  override def onRetry(): Unit = {
-    reAttemptCount += 1
-    println(s"retry attempted for ${reAttemptCount}th time.")
-    super.onRetry()
-  }
-
   var delayFlag = false
 
-  def potentiallyDelayedReturn(n: Int): Future[Int] = {
+  implicit val ec: ExecutionContext = system.dispatcher
+
+  def potentiallyDelayedReturn(n: Int)(implicit ec: ExecutionContext): Future[Int] = {
     Future {
       if (!delayFlag) {
         println("returning fast")
@@ -61,20 +68,21 @@ class AkkaCircuitBreakerRetrySpec extends TestKit(ActorSystem("AkkaCircuitBreake
     delayFlag = false
   }
 
+  import scala.concurrent.duration._
   override implicit val patienceConfig: PatienceConfig = PatienceConfig(
-    timeout = scaled(callTimeout),
-    interval = scaled(totalDelayTolerated + delaySeq.length.seconds)
+    timeout = scaled(CircuitBreaker.callTimeout),
+    interval = scaled(CircuitBreaker.totalDelayTolerated + CircuitBreaker.delaySeq.length.seconds)
   )
 
   "A CircuitBreaker" must {
 
     "define delay seq based on the inputted resetTimeout and maxResetTimeout" in {
-      println(s"delay Sequences: $delaySeq and total allowed delay: $totalDelayTolerated")
-      delaySeq.length !== 0
+      println(s"delay Sequences: ${CircuitBreaker.delaySeq} and total allowed delay: ${CircuitBreaker.totalDelayTolerated}")
+      CircuitBreaker.delaySeq.length !== 0
     }
 
     "handle fast tasks immediately." in {
-      runWithCircuitBreakerRetry {
+      CircuitBreaker.runWithCircuitBreakerRetry {
         Future {
           1
         }
@@ -84,7 +92,7 @@ class AkkaCircuitBreakerRetrySpec extends TestKit(ActorSystem("AkkaCircuitBreake
     }
 
     "handle tolerable delays by retrying." in {
-      runWithCircuitBreakerRetry {
+      CircuitBreaker.runWithCircuitBreakerRetry {
         delayFlag = !delayFlag
         potentiallyDelayedReturn(3)
       }.futureValue shouldBe 3
@@ -97,16 +105,16 @@ class AkkaCircuitBreakerRetrySpec extends TestKit(ActorSystem("AkkaCircuitBreake
 
       val intolerableDuration: Long = 5000
 
-      intolerableDuration should be >= delaySeq.last.toMillis
+      intolerableDuration should be >= CircuitBreaker.delaySeq.last.toMillis
       intolerableDuration should be >= patienceConfig.interval.toMillis
 
-      runWithCircuitBreakerRetry {
+      CircuitBreaker.runWithCircuitBreakerRetry {
         Future {
           Thread.sleep(intolerableDuration)
         }
       }.failed.futureValue shouldBe an[Exception]
 
-      reAttemptCount shouldBe delaySeq.length
+      reAttemptCount shouldBe CircuitBreaker.delaySeq.length
 
     }
 
